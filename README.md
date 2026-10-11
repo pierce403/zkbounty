@@ -1,78 +1,60 @@
-<p align="center">
-  <a href="https://nextjs-flask-starter.vercel.app/">
-    <img src="https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png" height="96">
-    <h3 align="center">Next.js Flask Starter</h3>
-  </a>
-</p>
+# zkbounty research lab
 
-<p align="center">Simple Next.js boilerplate that uses <a href="https://flask.palletsprojects.com/">Flask</a> as the API backend.</p>
+Fresh Rust/RISC Zero start, replacing the original Next.js/Flask scaffold. The original
+files remain in Git history at `bd0687747247f181f7a73da1fe8e32fc6afd4b41`.
 
-<br/>
+## First experiment
 
-## Introduction
+Prove knowledge of a private counterexample to a **toy missing-binding predicate**.
+The vulnerable model checks `output = scalar * loop_base (mod 97)` but never binds
+`loop_base` to `base`. The intended model checks `output = scalar * base (mod 97)`.
+The guest accepts only witnesses satisfying the first and violating the second.
+This demonstrates the class of error; it is not an Orchard exploit or Halo 2 verifier.
 
-This is a hybrid Next.js + Python app that uses Next.js as the frontend and Flask as the API backend. One great use case of this is to write Next.js apps that use Python AI libraries on the backend.
+The receipt journal exposes a schema version, fixed target digest, bounty ID,
+claimant commitment, and salted evidence commitment. The witness stays outside the
+journal. The host verifies the compiled guest image and expected bounty/claimant IDs,
+and rejects development receipts. No wallet, escrow, or Zcash settlement exists yet.
 
-## How It Works
+## Run
 
-The Python/Flask server is mapped into to Next.js app under `/api/`.
+Install Rust with rustup, then follow the [RISC Zero installation guide](https://dev.risczero.com/api/zkvm/install).
+The SDK/build crates are pinned to **3.0.6**; install matching cargo-risczero and r0vm.
+The custom RISC Zero Rust toolchain is also required for guest builds. This prototype
+was built with `rzup install rust 1.97.0`, `rzup install cargo-risczero 3.0.6`, and
+`rzup install r0vm 3.0.6`.
 
-This is implemented using [`next.config.js` rewrites](https://github.com/vercel/examples/blob/main/python/nextjs-flask/next.config.js) to map any request to `/api/:path*` to the Flask API, which is hosted in the `/api` folder.
-
-On localhost, the rewrite will be made to the `127.0.0.1:5328` port, which is where the Flask server is running.
-
-In production, the Flask server is hosted as [Python serverless functions](https://vercel.com/docs/concepts/functions/serverless-functions/runtimes/python) on Vercel.
-
-## Demo
-
-https://nextjs-flask-starter.vercel.app/
-
-## Deploy Your Own
-
-You can clone & deploy it to Vercel with one click:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?demo-title=Next.js%20Flask%20Starter&demo-description=Simple%20Next.js%20boilerplate%20that%20uses%20Flask%20as%20the%20API%20backend.&demo-url=https%3A%2F%2Fnextjs-flask-starter.vercel.app%2F&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F795TzKM3irWu6KBCUPpPz%2F44e0c6622097b1eea9b48f732bf75d08%2FCleanShot_2023-05-23_at_12.02.15.png&project-name=Next.js%20Flask%20Starter&repository-name=nextjs-flask-starter&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fexamples%2Ftree%2Fmain%2Fpython%2Fnextjs-flask&from=vercel-examples-repo)
-
-## Developing Locally
-
-You can clone & create this repo with the following command
-
-```bash
-npx create-next-app nextjs-flask --example "https://github.com/vercel/examples/tree/main/python/nextjs-flask"
+```sh
+cargo test -p zkbounty-claims
+mkdir -p artifacts
+cargo run -p zkbounty-host -- prove fixtures/model.json artifacts/receipt.json
+cargo run -p zkbounty-host -- verify artifacts/receipt.json \
+  0101010101010101010101010101010101010101010101010101010101010101 \
+  0202020202020202020202020202020202020202020202020202020202020202
+python scripts/check_receipt.py
 ```
 
-## Getting Started
+The default host uses r0vm; `--features prove` compiles local proving into the host.
+Do not set `RISC0_DEV_MODE` for these commands. The checked-in fixture and its salt are
+public teaching data. Actual submissions must use private witnesses and fresh random salts.
+Do not configure a remote prover for undisclosed vulnerability inputs without an explicit
+confidentiality decision: ZK protects the verifier, not a prover that receives the witness.
 
-First, install the dependencies:
+Run selected upstream Ironwood regressions in a separate checkout:
+`bash scripts/check_orchard.sh /tmp/zkbounty-orchard-research`.
 
-```bash
-npm install
-# or
-yarn
-# or
-pnpm install
-```
+## Research
 
-Then, run the development server:
+- [Zcash incident and circuit evaluation](research/zcash.md)
+- [Proof statement and prototype roadmap](research/protocol.md)
+- [Completed validation and limits](research/validation.md)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
+## Working conventions
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[AGENTS.md](AGENTS.md) records project instructions, verified commands, and lessons;
+[FEATURES.md](FEATURES.md) tracks acceptance criteria and readiness;
+[MEMORY.md](MEMORY.md) indexes durable decisions. These adapt the guidance at
+[recurse.bot](https://recurse.bot). Completed changes are pushed directly to `main`.
 
-The Flask server will be running on [http://127.0.0.1:5328](http://127.0.0.1:5328) – feel free to change the port in `package.json` (you'll also need to update it in `next.config.js`).
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [Flask Documentation](https://flask.palletsprojects.com/en/1.1.x/) - learn about Flask features and API.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+This is a research prototype. A successful receipt proves the pinned model ran on a
+counterexample; it does not establish a vulnerability in Zcash or entitlement to a payout.
