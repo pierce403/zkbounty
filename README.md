@@ -1,7 +1,8 @@
 # zkbounty research lab
 
-The project overview is a static HTML/CSS site deployed with Cloudflare Workers
-Static Assets. It describes the research; proving and receipt verification stay local.
+The [live project overview](https://zkbounty.bcrt43.workers.dev/) is a static HTML/CSS
+site deployed with Cloudflare Workers Static Assets. It describes the research;
+proving and receipt verification stay local.
 See [deployment](research/deployment.md) for the publishing workflow and live evidence.
 
 Fresh Rust/RISC Zero start, replacing the original Next.js/Flask scaffold. The original

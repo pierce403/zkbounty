@@ -14,7 +14,8 @@ summary: Durable zkbounty decisions and verification map.
 - **Zcash sources and open questions:** [incident review](research/zcash.md).
 - **Protocol boundaries and next milestones:** [protocol](research/protocol.md).
 - **Readiness:** [FEATURES.md](FEATURES.md).
-- **Website:** static project description; proof generation remains local.
+- **Website:** [live static project description](https://zkbounty.bcrt43.workers.dev/);
+  Cloudflare Workers Builds watches main; proof generation remains local.
   [Cloudflare deployment and evidence](research/deployment.md).
 - **Workflow lessons:** [AGENTS.md](AGENTS.md).
 

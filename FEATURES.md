@@ -1,12 +1,13 @@
 # zkbounty features
 
-Uses the [features.md format](https://features.md/). No feature is production-ready.
+Uses the [features.md format](https://features.md/). Proof and settlement features
+remain research prototypes; the static project overview is published.
 
 ## Features
 
 ### Public project overview
 
-- **Stability**: in-progress
+- **Stability**: stable
 - **Description**: Static HTML/CSS page describing the lab, teaching example,
   observed results, research notes, and open milestones.
 - **Properties**:
@@ -17,9 +18,9 @@ Uses the [features.md format](https://features.md/). No feature is production-re
 - **Test Criteria**:
   - [x] Static build and Wrangler dry run pass.
   - [x] Browser renders the overview and research links.
-  - [ ] Cloudflare native Git build deploys the published main revision.
-  - [ ] Public HTTPS, asset hashes, and missing-page response verified.
-  - [ ] Desktop and mobile live browser checks pass.
+  - [x] Cloudflare native Git build deploys the published main revision.
+  - [x] Public HTTPS, asset hashes, and missing-page response verified.
+  - [x] Desktop and mobile live browser checks pass.
 - **Evidence**: [deployment](research/deployment.md).
 
 ### Private counterexample proof
