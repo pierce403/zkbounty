@@ -4,6 +4,24 @@ Uses the [features.md format](https://features.md/). No feature is production-re
 
 ## Features
 
+### Public project overview
+
+- **Stability**: in-progress
+- **Description**: Static HTML/CSS page describing the lab, teaching example,
+  observed results, research notes, and open milestones.
+- **Properties**:
+  - Makes the teaching model and unfinished settlement explicit.
+  - Links to the original source and research record.
+  - Sends no witness inputs; no proving or verification service is hosted.
+- **Dependencies**: Node.js 22+, Wrangler 4.149.0, Cloudflare Workers Static Assets.
+- **Test Criteria**:
+  - [x] Static build and Wrangler dry run pass.
+  - [x] Browser renders the overview and research links.
+  - [ ] Cloudflare native Git build deploys the published main revision.
+  - [ ] Public HTTPS, asset hashes, and missing-page response verified.
+  - [ ] Desktop and mobile live browser checks pass.
+- **Evidence**: [deployment](research/deployment.md).
+
 ### Private counterexample proof
 
 - **Stability**: in-progress

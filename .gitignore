@@ -1,3 +1,9 @@
 /target/
 /methods/guest/target/
 /artifacts/
+/node_modules/
+/dist/
+/.wrangler/
+.env*
+.dev.vars*
+npm-debug.log*

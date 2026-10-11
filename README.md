@@ -1,5 +1,9 @@
 # zkbounty research lab
 
+The project overview is a static HTML/CSS site deployed with Cloudflare Workers
+Static Assets. It describes the research; proving and receipt verification stay local.
+See [deployment](research/deployment.md) for the publishing workflow and live evidence.
+
 Fresh Rust/RISC Zero start, replacing the original Next.js/Flask scaffold. The original
 files remain in Git history at `bd0687747247f181f7a73da1fe8e32fc6afd4b41`.
 
@@ -48,6 +52,7 @@ Run selected upstream Ironwood regressions in a separate checkout:
 - [Zcash incident and circuit evaluation](research/zcash.md)
 - [Proof statement and prototype roadmap](research/protocol.md)
 - [Completed validation and limits](research/validation.md)
+- [Static site deployment](research/deployment.md)
 
 ## Working conventions
 

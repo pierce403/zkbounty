@@ -31,6 +31,7 @@ schedule is configured by this file.
 - `host/`: proving and expected-context verification, rejects fake receipts.
 - `research/`: Zcash analysis, proof protocol, validation and limitations.
 - `scripts/`: reusable receipt and upstream regression checks.
+- `site/`: public static project description; no hosted prover or witness intake.
 - `FEATURES.md`: measurable behavior and readiness.
 - `MEMORY.md`: compact index of durable project decisions.
 
@@ -69,6 +70,9 @@ fresh random salts for real submissions. Never call the model an Orchard exploit
 - Shell GitHub pushes failed for missing credentials. Use connector-created blobs,
   trees and commits, then a non-force main ref update. Verify the remote contents.
 - Two lockfiles matter: the workspace and the separate guest workspace.
+- Publish the static site with Cloudflare Workers Builds watching main. Keep
+  Cloudflare credentials in Cloudflare, and verify the deployed revision in
+  `/deployment.json`. The website does not generate or verify receipts.
 
 When a durable lesson changes these instructions, update this file in the same
 contribution. Keep detailed experiment results in `research/validation.md`.
