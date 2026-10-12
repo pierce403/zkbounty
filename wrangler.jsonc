@@ -3,6 +3,10 @@
   "name": "zkbounty",
   "compatibility_date": "2026-10-11",
   "workers_dev": true,
+  "routes": [
+    { "pattern": "zkbounty.org/*", "zone_name": "zkbounty.org" },
+    { "pattern": "www.zkbounty.org/*", "zone_name": "zkbounty.org" }
+  ],
   "assets": {
     "directory": "./dist",
     "not_found_handling": "404-page"

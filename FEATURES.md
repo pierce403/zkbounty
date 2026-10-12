@@ -14,6 +14,7 @@ remain research prototypes; the static project overview is published.
   - Makes the teaching model and unfinished settlement explicit.
   - Links to the original source and research record.
   - Sends no witness inputs; no proving or verification service is hosted.
+  - Native Git deployments retain apex and www routes for zkbounty.org.
 - **Dependencies**: Node.js 22+, Wrangler 4.149.0, Cloudflare Workers Static Assets.
 - **Test Criteria**:
   - [x] Static build and Wrangler dry run pass.

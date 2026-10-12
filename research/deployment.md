@@ -1,6 +1,7 @@
 # Static project site
 
-Live URL: <https://zkbounty.bcrt43.workers.dev/>.
+Production domain: <https://zkbounty.org/> (with `www.zkbounty.org` also routed).
+Worker URL: <https://zkbounty.bcrt43.workers.dev/>.
 
 The website describes the current research lab. It uses handwritten HTML/CSS,
 with no client JavaScript, witness intake, wallet, or hosted proving service.
@@ -19,7 +20,11 @@ npm run check:deploy
 `scripts/build-site.mjs` copies only `site/` into `dist/` and writes
 `deployment.json` with the Git revision. Local artifacts, witnesses, and credentials
 are never copied. Cloudflare Workers Static Assets serves `dist/`, with custom
-404 handling and static response headers. No custom domain is configured.
+404 handling and static response headers. Tracked ordinary Worker routes cover
+`zkbounty.org/*` and `www.zkbounty.org/*`. The zone keeps its original website
+records proxied; static assets and the custom 404 page answer these requests.
+Cloudflare manages HTTPS. Domain activation and public verification are recorded
+in the local cloudflare-migrations coordination project.
 
 Cloudflare Workers Builds connects `pierce403/zkbounty`, production branch
 `main`, root `/`, build command `npm run build`, and deploy command
