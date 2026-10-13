@@ -11,10 +11,13 @@ summary: Durable zkbounty decisions and verification map.
 - **Current proof:** private counterexample to a teaching predicate, not Orchard.
   Bounty and claimant IDs plus a salted commitment are public journal outputs.
 - **Verified experiments:** [validation](research/validation.md).
+- **Historical pilot:** [pinned circuit reproduction and open payout gate](research/historical-pilot.md).
+- **Node baseline:** [isolated pre-fix ordinary Orchard replay](research/historical-node-baseline.md),
+  with the adversarial transaction and full zkVM receipt still open.
 - **Zcash sources and open questions:** [incident review](research/zcash.md).
 - **Protocol boundaries and next milestones:** [protocol](research/protocol.md).
 - **Readiness:** [FEATURES.md](FEATURES.md).
-- **Website:** [live static project description](https://zkbounty.bcrt43.workers.dev/);
+- **Website:** [live static project description](https://zkbounty.org/);
   Cloudflare Workers Builds watches main; proof generation remains local.
   [Cloudflare deployment and evidence](research/deployment.md).
 - **Workflow lessons:** [AGENTS.md](AGENTS.md).

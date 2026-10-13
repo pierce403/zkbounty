@@ -1,7 +1,7 @@
 # zkbounty research lab
 
-The [live project overview](https://zkbounty.bcrt43.workers.dev/) is a static HTML/CSS
-site deployed with Cloudflare Workers Static Assets. It describes the research;
+The [live project overview](https://zkbounty.org/) is a static HTML/CSS site
+deployed with Cloudflare Workers Static Assets. It describes the research;
 proving and receipt verification stay local.
 See [deployment](research/deployment.md) for the publishing workflow and live evidence.
 
@@ -19,7 +19,8 @@ This demonstrates the class of error; it is not an Orchard exploit or Halo 2 ver
 The receipt journal exposes a schema version, fixed target digest, bounty ID,
 claimant commitment, and salted evidence commitment. The witness stays outside the
 journal. The host verifies the compiled guest image and expected bounty/claimant IDs,
-and rejects development receipts. No wallet, escrow, or Zcash settlement exists yet.
+and rejects development receipts. A separate, locally tested Sepolia escrow
+contract exists for the historical pilot; it has not been deployed or funded.
 
 ## Run
 
@@ -48,12 +49,26 @@ confidentiality decision: ZK protects the verifier, not a prover that receives t
 Run selected upstream Ironwood regressions in a separate checkout:
 `bash scripts/check_orchard.sh /tmp/zkbounty-orchard-research`.
 
+The [historical Orchard pilot](research/historical-pilot.md) includes a pinned
+two-proof same-note circuit experiment and a local escrow contract. Its
+historical node replay, full RISC Zero receipt, and Sepolia payment remain open.
+Run its circuit comparison in a new checkout directory with
+`bash scripts/check_historical_orchard.sh /tmp/zkbounty-historical-check`.
+With a pinned `zcashd v6.12.3` and `zcash-cli` on `PATH`, replay the
+[ordinary isolated node baseline](research/historical-node-baseline.md) with
+`bash scripts/check_historical_node_baseline.sh /tmp/zkbounty-node-baseline`.
+Run the escrow tests with `forge test -vv` and the local transaction flow with
+`bash scripts/check_bounty_anvil.sh`. The latter starts and stops a fresh Anvil
+node using its public development accounts; it never reaches Sepolia.
+
 ## Research
 
 - [Zcash incident and circuit evaluation](research/zcash.md)
 - [Proof statement and prototype roadmap](research/protocol.md)
 - [Completed validation and limits](research/validation.md)
 - [Static site deployment](research/deployment.md)
+- [Historical Orchard bounty pilot](research/historical-pilot.md)
+- [Historical node baseline](research/historical-node-baseline.md)
 
 ## Working conventions
 

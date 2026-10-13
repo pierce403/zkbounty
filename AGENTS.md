@@ -31,6 +31,8 @@ schedule is configured by this file.
 - `host/`: proving and expected-context verification, rejects fake receipts.
 - `research/`: Zcash analysis, proof protocol, validation and limitations.
 - `scripts/`: reusable receipt and upstream regression checks.
+- `scripts/check_historical_node_baseline.sh`: isolated v6.12.3 ordinary
+  Orchard deposits and spend; it does not replay the exploit.
 - `site/`: public static project description; no hosted prover or witness intake.
 - `FEATURES.md`: measurable behavior and readiness.
 - `MEMORY.md`: compact index of durable project decisions.
@@ -60,6 +62,10 @@ fresh random salts for real submissions. Never call the model an Orchard exploit
 - `assign_advice` is witness assignment, not equality with an existing cell;
   the historical Orchard fix adds coordinate copy constraints. Review adversarial
   witnesses, not only honest witness generation.
+- Two historical same-note Action proofs with distinct nullifiers establish a
+  circuit flaw, not a confirmed pool withdrawal. Require full transactions,
+  node-confirmed balances, and a full RISC Zero receipt before paying or
+  labeling the historical pilot complete.
 - Pool, protocol era, flag polarity, and verifying-key selection are all relevant;
   the initial Ironwood PR's API names differ from current source.
 - RISC Zero dev receipts are not proofs. Preserve explicit fake-receipt rejection.
@@ -73,6 +79,8 @@ fresh random salts for real submissions. Never call the model an Orchard exploit
 - Publish the static site with Cloudflare Workers Builds watching main. Keep
   Cloudflare credentials in Cloudflare, and verify the deployed revision in
   `/deployment.json`. The website does not generate or verify receipts.
+- `bash scripts/check_bounty_anvil.sh` runs local-only payout and refund checks
+  with public Anvil development accounts. It is not Sepolia payment evidence.
 
 When a durable lesson changes these instructions, update this file in the same
 contribution. Keep detailed experiment results in `research/validation.md`.

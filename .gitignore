@@ -3,6 +3,8 @@
 /artifacts/
 /node_modules/
 /dist/
+/out/
+/cache/
 /.wrangler/
 .env*
 .dev.vars*

@@ -1,0 +1,171 @@
+diff --git a/halo2_gadgets/Cargo.toml b/halo2_gadgets/Cargo.toml
+index 0360505..91283f0 100644
+--- a/halo2_gadgets/Cargo.toml
++++ b/halo2_gadgets/Cargo.toml
+@@ -53,6 +53,8 @@ pprof = { version = "0.8", features = ["criterion", "flamegraph"] } # MSRV 1.56
+ bench = false
+ 
+ [features]
++exploit-lab = []
++fixed-binding = []
+ test-dev-graph = [
+     "halo2_proofs/dev-graph",
+     "plotters",
+diff --git a/halo2_gadgets/src/ecc/chip.rs b/halo2_gadgets/src/ecc/chip.rs
+index 469c19e..e124596 100644
+--- a/halo2_gadgets/src/ecc/chip.rs
++++ b/halo2_gadgets/src/ecc/chip.rs
+@@ -26,6 +26,79 @@ pub(super) mod witness_point;
+ 
+ pub use constants::*;
+ 
++#[cfg(feature = "exploit-lab")]
++/// Isolated witness substitution for historical circuit soundness experiments.
++pub mod exploit_lab {
++    use std::cell::RefCell;
++
++    use ff::Field;
++    use group::Curve;
++    use halo2_proofs::circuit::Value;
++    use pasta_curves::pallas;
++
++    use super::mul::{decompose_for_scalar_mul, INCOMPLETE_LEN};
++
++    thread_local! {
++        static REPLACEMENT: RefCell<Option<(pallas::Affine, pallas::Affine, usize)>> = RefCell::new(None);
++    }
++
++    /// Substitute only the unanchored rows for the selected original base.
++    pub fn set(original: pallas::Point, replacement: pallas::Point) {
++        REPLACEMENT.with(|cell| *cell.borrow_mut() = Some((original.to_affine(), replacement.to_affine(), 2)));
++    }
++
++    /// Clear the substitution in this thread.
++    pub fn clear() {
++        REPLACEMENT.with(|cell| *cell.borrow_mut() = None);
++    }
++
++    pub(super) fn replace(original: pallas::Affine) -> pallas::Affine {
++        REPLACEMENT.with(|cell| {
++            let mut entry = cell.borrow_mut();
++            match entry.as_mut() {
++                Some((target, replacement, remaining)) if original == *target && *remaining > 0 => {
++                    *remaining -= 1;
++                    *replacement
++                }
++                _ => original,
++            }
++        })
++    }
++
++    /// Solve the unchanged historical multiplication constraints for the unanchored base.
++    pub fn replacement_for_output(
++        alpha: pallas::Base,
++        original: pallas::Point,
++        desired: pallas::Point,
++    ) -> pallas::Point {
++        let bits = decompose_for_scalar_mul(Value::known(&alpha));
++        let mut q_coefficient = pallas::Scalar::zero();
++        let mut b_coefficient = pallas::Scalar::from(2);
++        for (index, bit) in bits.iter().enumerate() {
++            let mut known = None;
++            bit.assert_if_known(|value| {
++                known = Some(*value);
++                true
++            });
++            let set = known.expect("known alpha");
++            if index < INCOMPLETE_LEN {
++                q_coefficient = q_coefficient.double()
++                    + if set { pallas::Scalar::one() } else { -pallas::Scalar::one() };
++                b_coefficient = b_coefficient.double();
++            } else if index < bits.len() - 1 {
++                q_coefficient = q_coefficient.double();
++                b_coefficient = b_coefficient.double()
++                    + if set { pallas::Scalar::one() } else { -pallas::Scalar::one() };
++            } else if !set {
++                b_coefficient -= pallas::Scalar::one();
++            }
++        }
++        let inverse = Option::<pallas::Scalar>::from(q_coefficient.invert())
++            .expect("nonzero incomplete coefficient");
++        (desired - original * b_coefficient) * inverse
++    }
++}
++
+ // Exposed for Sinsemilla.
+ pub(crate) use mul::incomplete::DoubleAndAdd;
+ 
+diff --git a/halo2_gadgets/src/ecc/chip/mul.rs b/halo2_gadgets/src/ecc/chip/mul.rs
+index 2714718..af1be36 100644
+--- a/halo2_gadgets/src/ecc/chip/mul.rs
++++ b/halo2_gadgets/src/ecc/chip/mul.rs
+@@ -27,7 +27,7 @@ mod overflow;
+ const NUM_COMPLETE_BITS: usize = 3;
+ 
+ // Bits used in incomplete addition. k_{254} to k_{4} inclusive
+-const INCOMPLETE_LEN: usize = pallas::Scalar::NUM_BITS as usize - 1 - NUM_COMPLETE_BITS;
++pub(super) const INCOMPLETE_LEN: usize = pallas::Scalar::NUM_BITS as usize - 1 - NUM_COMPLETE_BITS;
+ 
+ // Bits k_{254} to k_{4} inclusive are used in incomplete addition.
+ // The `hi` half is k_{254} to k_{130} inclusive (length 125 bits).
+@@ -418,7 +418,7 @@ impl<F: Field> Deref for Z<F> {
+ // https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
+ #[allow(clippy::assign_op_pattern)]
+ #[allow(clippy::ptr_offset_with_cast)]
+-fn decompose_for_scalar_mul(scalar: Value<&pallas::Base>) -> Vec<Value<bool>> {
++pub(super) fn decompose_for_scalar_mul(scalar: Value<&pallas::Base>) -> Vec<Value<bool>> {
+     construct_uint! {
+         struct U256(4);
+     }
+diff --git a/halo2_gadgets/src/ecc/chip/mul/incomplete.rs b/halo2_gadgets/src/ecc/chip/mul/incomplete.rs
+index 8baa115..b9cfa8f 100644
+--- a/halo2_gadgets/src/ecc/chip/mul/incomplete.rs
++++ b/halo2_gadgets/src/ecc/chip/mul/incomplete.rs
+@@ -6,7 +6,7 @@ use group::ff::PrimeField;
+ use halo2_proofs::{
+     circuit::{Region, Value},
+     plonk::{
+-        Advice, Column, ConstraintSystem, Constraints, Error, Expression, Selector, VirtualCells,
++        Advice, Assigned, Column, ConstraintSystem, Constraints, Error, Expression, Selector, VirtualCells,
+     },
+     poly::Rotation,
+ };
+@@ -237,6 +237,16 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
+         assert_eq!(bits.len(), NUM_BITS);
+ 
+         // Handle exceptional cases
++        #[cfg(feature = "exploit-lab")]
++        let (x_p, y_p) = {
++            use halo2_proofs::arithmetic::CurveAffine;
++            let point = base.point().map(super::super::exploit_lab::replace);
++            (
++                point.map(|point| Assigned::from(*point.coordinates().unwrap().x())),
++                point.map(|point| Assigned::from(*point.coordinates().unwrap().y())),
++            )
++        };
++        #[cfg(not(feature = "exploit-lab"))]
+         let (x_p, y_p) = (base.x.value().cloned(), base.y.value().cloned());
+         let (x_a, y_a) = (acc.0.value().cloned(), acc.1.value().cloned());
+ 
+@@ -306,8 +316,19 @@ impl<const NUM_BITS: usize> Config<NUM_BITS> {
+             zs.push(Z(z.clone()));
+ 
+             // Assign `x_p`, `y_p`
+-            region.assign_advice(|| "x_p", self.double_and_add.x_p, row + offset, || x_p)?;
+-            region.assign_advice(|| "y_p", self.y_p, row + offset, || y_p)?;
++            #[cfg(feature = "fixed-binding")]
++            if row == 0 {
++                base.x().copy_advice(|| "x_p", region, self.double_and_add.x_p, row + offset)?;
++                base.y().copy_advice(|| "y_p", region, self.y_p, row + offset)?;
++            } else {
++                region.assign_advice(|| "x_p", self.double_and_add.x_p, row + offset, || x_p)?;
++                region.assign_advice(|| "y_p", self.y_p, row + offset, || y_p)?;
++            }
++            #[cfg(not(feature = "fixed-binding"))]
++            {
++                region.assign_advice(|| "x_p", self.double_and_add.x_p, row + offset, || x_p)?;
++                region.assign_advice(|| "y_p", self.y_p, row + offset, || y_p)?;
++            }
+ 
+             // If the bit is set, use `y`; if the bit is not set, use `-y`
+             let y_p = y_p

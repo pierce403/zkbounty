@@ -36,7 +36,8 @@ remain research prototypes; the static project overview is published.
 - **Test Criteria**:
   - [x] Valid counterexample accepted; honest and malformed cases rejected.
   - [x] Real receipt generated and verified against the compiled image.
-  - [ ] Actual historical Orchard malicious-witness reproduction.
+  - [x] Native historical Orchard malicious-witness proof reproduction; the
+    RISC Zero guest still proves only the teaching predicate.
   - [ ] Independent acceptance-invariant review.
 - **Evidence**: [validation](research/validation.md), claims tests, receipt checker.
 
@@ -65,9 +66,39 @@ remain research prototypes; the static project overview is published.
 - **Test Criteria**:
   - [x] Missing-binding root cause and patch documented from primary sources.
   - [x] Three Ironwood flag/restriction regressions passed.
-  - [ ] Historical/fixed adversarial circuit comparison.
+  - [x] Two nonzero same-note adversarial Action proofs verify under the
+    historical circuit; the corrected coordinate binding rejects their witnesses.
+  - [ ] A pinned historical node accepts transactions containing both spends.
   - [ ] Independently machine-check pinned Lean formalization.
 - **Evidence**: [research](research/zcash.md), upstream checker, validation record.
+
+### Historical Orchard bounty pilot
+
+- **Stability**: in-progress
+- **Description**: Reproduce the disclosed Orchard double-spend with synthetic
+  value, prove the full replay in RISC Zero, and manually settle a Sepolia reward.
+- **Properties**:
+  - Pinned local experiments distinguish circuit proofs from accepted transactions.
+  - The single-bounty contract holds 0.001 test ETH for seven days and lets one
+    reviewer approve one claimant withdrawal.
+  - No contract approval or public success claim is made before node replay,
+    full receipt verification, and private report review.
+- **Dependencies**: Historical regtest node, real exploit transactions, full
+  RISC Zero guest, independent reviewer, and Sepolia test wallets.
+- **Test Criteria**:
+  - [x] Two same-note, distinct-nullifier historical Action proofs verify.
+  - [x] Corrected binding rejects both malicious witnesses; honest proof passes.
+  - [x] Pinned `zcashd v6.12.3` confirms two synthetic Orchard deposits and an
+    ordinary Orchard spend with expected pool balances.
+  - [ ] Released corrected verifier rejects serialized adversarial proofs.
+  - [x] Escrow contract's six local Foundry tests pass.
+  - [x] Local Anvil payout and refund transactions pass, including unauthorized
+    approval, duplicate withdrawal, and late claim rejection.
+  - [ ] Pre-fix node confirms both transactions and excess synthetic withdrawal.
+  - [ ] Full RISC Zero receipt verifies the transactions and pool accounting.
+  - [ ] A funded Sepolia claim pays the bound claimant.
+- **Evidence**: [historical pilot](research/historical-pilot.md),
+  [node baseline](research/historical-node-baseline.md).
 
 ### Shielded bounty settlement
 

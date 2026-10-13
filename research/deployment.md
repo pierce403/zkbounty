@@ -74,6 +74,16 @@ persistent setting change, so defaults were retained. It also blocked a local
 Git reset; a recovery stash and fast-forward merge synchronized the checkout
 without dropping working files or rewriting history.
 
+## Historical pilot status publication
+
+The static page reports only the reproduced circuit proofs, confirmed
+ordinary historical-node baseline, and locally tested escrow. It labels the
+same-note transaction replay, full RISC Zero exploit receipt, and Sepolia
+payout incomplete. The page links the original advisory and repository
+evidence. Continue using native Git deployment from `main`; compare the public
+`/deployment.json` revision with the published commit and check both the
+Worker URL and production domain after the build reaches the live site.
+
 ## Source documentation
 
 - [Workers Static Assets setup](https://developers.cloudflare.com/workers/static-assets/get-started/)
