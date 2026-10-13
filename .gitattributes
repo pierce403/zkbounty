@@ -1,0 +1,2 @@
+# Unified diffs require a leading context marker on blank lines.
+research/patches/*.patch whitespace=-blank-at-eol,-blank-at-eof
