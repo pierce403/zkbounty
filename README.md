@@ -83,3 +83,5 @@ counterexample; it does not establish a vulnerability in Zcash or entitlement to
 ## Licensing scope
 
 Original project code and documentation are licensed under the [Apache License, Version 2.0](LICENSE). Third-party dependencies, vendored code, quoted material, data, fonts, media, and other third-party assets retain their respective licenses and rights; this grant does not relicense them. Existing license notices and attribution must be preserved.
+
+Solidity sources retain their existing file-level SPDX identifiers, including MIT-licensed contracts and any UNLICENSED scaffold fixtures. Those files are excluded from the repository-wide Apache-2.0 grant. Their source bytes are preserved to avoid changing compiler metadata or historical verification artifacts.
