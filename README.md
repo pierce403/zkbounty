@@ -79,3 +79,7 @@ node using its public development accounts; it never reaches Sepolia.
 
 This is a research prototype. A successful receipt proves the pinned model ran on a
 counterexample; it does not establish a vulnerability in Zcash or entitlement to a payout.
+
+## Licensing scope
+
+Original project code and documentation are licensed under the [Apache License, Version 2.0](LICENSE). Third-party dependencies, vendored code, quoted material, data, fonts, media, and other third-party assets retain their respective licenses and rights; this grant does not relicense them. Existing license notices and attribution must be preserved.
